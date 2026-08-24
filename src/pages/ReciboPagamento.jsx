@@ -48,6 +48,9 @@ export default function ReciboPagamento() {
 
   const valorTotal = lancamentos.reduce((soma, l) => soma + Number(l.valor), 0);
   const procedimento = consulta.tipo === 'exame' ? consulta.exame_nome : 'Consulta médica';
+  const valorIbs = Number(consulta.valor_ibs) || 0;
+  const valorCbs = Number(consulta.valor_cbs) || 0;
+  const temImposto = valorIbs > 0 || valorCbs > 0;
 
   return (
     <div>
@@ -98,7 +101,23 @@ export default function ReciboPagamento() {
             <span className="font-medium">{procedimento}</span>
           </div>
           <div>
-            <span className="text-gray-500">Valor:</span>{' '}
+            <span className="text-gray-500">Valor do procedimento:</span>{' '}
+            <span className="font-medium">{formatarMoeda(consulta.valor)}</span>
+          </div>
+          {temImposto && (
+            <>
+              <div>
+                <span className="text-gray-500">IBS:</span>{' '}
+                <span className="font-medium">{formatarMoeda(valorIbs)}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">CBS:</span>{' '}
+                <span className="font-medium">{formatarMoeda(valorCbs)}</span>
+              </div>
+            </>
+          )}
+          <div>
+            <span className="text-gray-500">Total pago:</span>{' '}
             <span className="font-medium">{formatarMoeda(valorTotal)}</span>
           </div>
           <div>

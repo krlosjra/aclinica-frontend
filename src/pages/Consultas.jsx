@@ -16,6 +16,7 @@ import * as usuariosService from '../services/usuariosService';
 import * as examesService from '../services/examesService';
 import * as laudosService from '../services/laudosService';
 import * as termosService from '../services/termosService';
+import * as configuracaoService from '../services/configuracaoService';
 import { formatarMoeda, formatarDataHora } from '../utils/formatters';
 
 const localizer = dateFnsLocalizer({
@@ -110,6 +111,8 @@ export default function Consultas() {
   const [erroPagamento, setErroPagamento] = useState('');
   const [arquivoTermo, setArquivoTermo] = useState(null);
   const [confirmandoPagamento, setConfirmandoPagamento] = useState(false);
+  const [incluirImposto, setIncluirImposto] = useState(true);
+  const [configClinica, setConfigClinica] = useState(null);
 
   const [modalLaudoAberto, setModalLaudoAberto] = useState(false);
   const [conteudoLaudo, setConteudoLaudo] = useState('');
@@ -154,6 +157,7 @@ export default function Consultas() {
     }
     usuariosService.listarMedicos().then(setMedicos).catch(() => {});
     examesService.listarExames().then(setExames).catch(() => {});
+    configuracaoService.obterConfiguracao().then(setConfigClinica).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carregarConsultas, podeGerenciar]);
 
@@ -324,6 +328,7 @@ export default function Consultas() {
     });
     setErroPagamento('');
     setArquivoTermo(null);
+    setIncluirImposto(true);
     setModalDetalheAberto(false);
     setModalPagamentoAberto(true);
   }
@@ -334,6 +339,25 @@ export default function Consultas() {
   const exigeTermoConsentimento =
     consultaSelecionada?.tipo === 'exame' &&
     !!consultaSelecionada?.exame_termo_consentimento?.trim();
+
+  // Preparação IBS/CBS: cartão ou PIX sempre incluem o imposto; só
+  // 100% dinheiro é que vira opcional. O valor final quem calcula de
+  // verdade é o servidor (ver atualizarStatus) — isso aqui é só pra
+  // mostrar a prévia certa pro atendente antes de confirmar.
+  const impostosAtivos = !!configClinica?.impostos_ativos;
+  const valorProcedimento = Number(consultaSelecionada?.valor) || 0;
+  const aliquotaIbs = Number(configClinica?.aliquota_ibs) || 0;
+  const aliquotaCbs = Number(configClinica?.aliquota_cbs) || 0;
+  const pagamentoTemCartaoOuPix =
+    (Number(pagamento.valor_cartao) || 0) > 0 || (Number(pagamento.valor_pix) || 0) > 0;
+  const incluirImpostoEfetivo = pagamentoTemCartaoOuPix ? true : incluirImposto;
+  const valorIbsPrevisto = incluirImpostoEfetivo
+    ? Math.round(valorProcedimento * (aliquotaIbs / 100) * 100) / 100
+    : 0;
+  const valorCbsPrevisto = incluirImpostoEfetivo
+    ? Math.round(valorProcedimento * (aliquotaCbs / 100) * 100) / 100
+    : 0;
+  const totalComImposto = valorProcedimento + valorIbsPrevisto + valorCbsPrevisto;
 
   function cancelarModalPagamento() {
     setModalPagamentoAberto(false);
@@ -374,6 +398,7 @@ export default function Consultas() {
         valor_dinheiro: Number(pagamento.valor_dinheiro) || 0,
         valor_cartao: Number(pagamento.valor_cartao) || 0,
         valor_pix: Number(pagamento.valor_pix) || 0,
+        incluir_imposto: incluirImpostoEfetivo,
       });
       setModalPagamentoAberto(false);
       navigate(`/recibo/${consultaSelecionada.id}`);
@@ -415,6 +440,14 @@ export default function Consultas() {
   function cancelarModalLaudo() {
     setModalLaudoAberto(false);
     setModalDetalheAberto(true);
+  }
+
+  async function verTermoAssinado() {
+    try {
+      await termosService.abrirTermoAssinado(consultaSelecionada.id);
+    } catch (err) {
+      alert(err.response?.data?.erro || 'Não foi possível abrir o termo assinado.');
+    }
   }
 
   async function salvarLaudo(e) {
@@ -585,6 +618,14 @@ export default function Consultas() {
                     Laudar Exame
                   </button>
                 ))}
+              {consultaSelecionada.tipo === 'exame' && consultaSelecionada.termo_assinado_id && (
+                <button
+                  onClick={verTermoAssinado}
+                  className="px-3 py-1.5 border border-gray-300 text-gray-700 text-xs rounded-md hover:bg-gray-50"
+                >
+                  Ver Termo Assinado
+                </button>
+              )}
               {['agendada', 'confirmada'].includes(consultaSelecionada.status) && (
                 <button
                   onClick={() => mudarStatus('cancelada')}
@@ -640,6 +681,41 @@ export default function Consultas() {
                 <p className="text-xs text-green-700 mt-1">✓ {arquivoTermo.name} selecionado</p>
               )}
             </div>
+          </div>
+        )}
+
+        {impostosAtivos && valorProcedimento > 0 && (
+          <div className="bg-amber-50 border border-amber-100 rounded-md p-3 mb-3 space-y-2">
+            <div className="text-xs text-amber-900 space-y-1">
+              <div className="flex justify-between">
+                <span>Procedimento</span>
+                <span className="font-medium">{formatarMoeda(valorProcedimento)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>IBS ({aliquotaIbs}%)</span>
+                <span className="font-medium">{formatarMoeda(valorIbsPrevisto)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>CBS ({aliquotaCbs}%)</span>
+                <span className="font-medium">{formatarMoeda(valorCbsPrevisto)}</span>
+              </div>
+              <div className="flex justify-between border-t border-amber-200 pt-1 font-semibold">
+                <span>Total a cobrar</span>
+                <span>{formatarMoeda(totalComImposto)}</span>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 text-xs text-amber-900">
+              <input
+                type="checkbox"
+                checked={incluirImpostoEfetivo}
+                disabled={pagamentoTemCartaoOuPix}
+                onChange={(e) => setIncluirImposto(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              Incluir imposto neste pagamento
+              {pagamentoTemCartaoOuPix && ' (obrigatório em cartão/PIX)'}
+            </label>
           </div>
         )}
 
