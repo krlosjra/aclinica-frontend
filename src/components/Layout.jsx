@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import useLicenca from '../hooks/useLicenca';
 import AvisoLicenca from './AvisoLicenca';
 import LicencaBloqueada from './LicencaBloqueada';
+import Footer from './Footer';
+import logo from '../assets/logo.svg';
 
 const ROTULOS_ROLE = {
   admin: 'Administrador',
@@ -33,7 +35,10 @@ export default function Layout() {
     <div className="flex h-screen">
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col print:hidden">
         <div className="p-5 border-b border-gray-100">
-          <h1 className="text-lg font-bold text-primary-700">Clínica</h1>
+          <div className="flex items-center gap-2">
+            <img src={logo} alt="Aclinika" className="w-8 h-8 rounded-md" />
+            <h1 className="text-lg font-bold text-primary-700">Aclinika</h1>
+          </div>
           <p className="text-xs text-gray-500 mt-1">
             {usuario?.nome} · {ROTULOS_ROLE[usuario?.role] || usuario?.role}
           </p>
@@ -78,6 +83,7 @@ export default function Layout() {
             <Outlet />
           )}
         </div>
+        <Footer />
       </main>
     </div>
   );

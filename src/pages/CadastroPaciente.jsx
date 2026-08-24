@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import * as authService from '../services/authService';
+import Footer from '../components/Footer';
 
 const FORM_VAZIO = { nome: '', email: '', senha: '', cpf: '', telefone: '', data_nascimento: '', cep: '' };
 
@@ -35,7 +36,7 @@ export default function CadastroPaciente() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-10">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4 py-10">
       <div className="w-full max-w-sm bg-white p-8 rounded-lg shadow-sm border border-gray-100">
         <h1 className="text-xl font-bold text-center text-primary-700 mb-1">Criar minha conta</h1>
         <p className="text-sm text-gray-500 text-center mb-6">
@@ -141,6 +142,7 @@ export default function CadastroPaciente() {
           </Link>
         </p>
       </div>
+      <Footer />
     </div>
   );
 }

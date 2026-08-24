@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Footer from '../components/Footer';
+import logo from '../assets/logo.svg';
 
 export default function Login() {
   const { entrar } = useAuth();
@@ -26,9 +28,10 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm bg-white p-8 rounded-lg shadow-sm border border-gray-100">
-        <h1 className="text-xl font-bold text-center text-primary-700 mb-1">Clínica</h1>
+        <img src={logo} alt="Aclinika" className="w-14 h-14 mx-auto mb-3 rounded-xl" />
+        <h1 className="text-xl font-bold text-center text-primary-700 mb-1">Aclinika</h1>
         <p className="text-sm text-gray-500 text-center mb-6">
           Entre com seu email e senha
         </p>
@@ -74,6 +77,7 @@ export default function Login() {
           </Link>
         </p>
       </div>
+      <Footer />
     </div>
   );
 }
