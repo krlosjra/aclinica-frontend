@@ -60,7 +60,7 @@ function formatarDataApi(data) {
   return data.toISOString().slice(0, 10);
 }
 
-const PAGAMENTO_VAZIO = { valor_dinheiro: '', valor_cartao: '', valor_pix: '' };
+const PAGAMENTO_VAZIO = { valor_dinheiro: '', valor_cartao: '', valor_pix: '', senha: '' };
 
 const NOVA_CONSULTA_VAZIA = {
   tipo: 'consulta',
@@ -167,8 +167,8 @@ export default function Consultas() {
         id: c.id,
         title:
           c.tipo === 'exame'
-            ? `[Exame] ${c.exame_nome} — ${c.paciente_nome}`
-            : `${c.paciente_nome} — Dr(a). ${c.medico_nome}`,
+            ? `[Exame] ${c.exame_nome} — ${c.senha ? `Senha ${c.senha} — ` : ''}${c.paciente_nome}`
+            : `Consulta — ${c.senha ? `Senha ${c.senha} — ` : ''}${c.paciente_nome} — Dr(a). ${c.medico_nome}`,
         start: new Date(c.data_hora),
         end: new Date(new Date(c.data_hora).getTime() + 30 * 60000), // slots de 30min
         resource: c,
@@ -376,6 +376,10 @@ export default function Consultas() {
       setErroPagamento('Informe ao menos um valor recebido (dinheiro, cartão ou PIX).');
       return;
     }
+    if (!pagamento.senha.trim()) {
+      setErroPagamento('Informe a senha de atendimento.');
+      return;
+    }
     if (exigeTermoConsentimento && !arquivoTermo) {
       setErroPagamento(
         'Envie a foto do termo de consentimento assinado antes de confirmar o pagamento.'
@@ -399,6 +403,7 @@ export default function Consultas() {
         valor_cartao: Number(pagamento.valor_cartao) || 0,
         valor_pix: Number(pagamento.valor_pix) || 0,
         incluir_imposto: incluirImpostoEfetivo,
+        senha: pagamento.senha.trim(),
       });
       setModalPagamentoAberto(false);
       navigate(`/recibo/${consultaSelecionada.id}`);
@@ -531,6 +536,12 @@ export default function Consultas() {
               <div>
                 <span className="text-gray-500">Exame:</span>{' '}
                 <span className="font-medium">{consultaSelecionada.exame_nome}</span>
+              </div>
+            )}
+            {consultaSelecionada.senha && (
+              <div>
+                <span className="text-gray-500">Senha:</span>{' '}
+                <span className="font-medium">{consultaSelecionada.senha}</span>
               </div>
             )}
             <div>
@@ -722,13 +733,26 @@ export default function Consultas() {
         <form onSubmit={confirmarComPagamento} className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
+              Senha de atendimento
+            </label>
+            <input
+              type="text"
+              autoFocus
+              value={pagamento.senha}
+              onChange={(e) => setPagamento({ ...pagamento, senha: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              placeholder="Ex: A12"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Recebido em dinheiro (R$)
             </label>
             <input
               type="number"
               step="0.01"
               min="0"
-              autoFocus
               value={pagamento.valor_dinheiro}
               onChange={(e) => setPagamento({ ...pagamento, valor_dinheiro: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
